@@ -31,3 +31,4 @@ module.exports.decode = async (token) => {
     });
   });
 };
+

@@ -1,5 +1,5 @@
-const UserRegister = require("../models/UserRegister");
-const {decode} = require("../utils/jwt")
+const UserRegister = require('../models/UserRegister');
+const { decode } = require('../utils/jwt');
 
 module.exports.authByToken = async (req, res, next) => {
   //Check for Authorization header
@@ -10,7 +10,7 @@ module.exports.authByToken = async (req, res, next) => {
   if (!authHeader) {
     return res.status(401).json({
       errors: {
-        body: ['Authorization failed', 'No Authorization header'],
+        body: ['Authorization Header Not Found'],
         code: 'failedAuthentication',
       },
     });

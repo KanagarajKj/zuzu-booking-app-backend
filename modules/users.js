@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 var UserRegister = mongoose.model('UserRegister');
-var UserLog = mongoose.model("UserLog");
+var UserLog = mongoose.model('UserLog');
 const { sign } = require('../utils/jwt');
 
 const validator = require('validator');
@@ -9,71 +9,160 @@ const bcrypt = require('bcrypt');
 const { response } = require('express');
 const saltRounds = 10;
 
-module.exports.signUp = (fullName, phone, email, password) => {
+const twilio = require('twilio');
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+
+module.exports.signUp = (fullName, phone, email, password, typeOfPerson) => {
   return new Promise((resolve, reject) => {
-    UserRegister.findOne({ $or: [{ email }], isActive: true })
-      .then((user) => {
-        if (user) {
-          return reject({
-            message: 'User Already Exist',
-            code: 'userExist',
-          });
-        } else {
-          var user = new UserRegister();
-          user.email = email;
-          user.fullName = fullName;
-          user.phone = phone;
-          bcrypt.hash(password, saltRounds, function (err, hash) {
-            user.hash = hash;
-            user
-              .save()
-              .then(async function () {
-                UserLog.create({
-                  userId: user.id,
-                  logType:"Sign Up",
-                });
-                let { token } = await sign(user);
-                return resolve({
-                  token,
-                  message: 'User registered successfully!',
-                  code: 'userRegistered',
-                });
-              })
-              .catch((err) => reject(err));
-          });
-        }
+    if (typeOfPerson === 'admin') {
+      UserRegister.findOne({
+        email: email,
+        typeOfPerson: 'admin',
+        isActive: true,
       })
-      .catch((err) => reject(err));
+        .then((user) => {
+          if (user) {
+            return reject({
+              message: 'Admin Already Exist',
+              code: 'adminExist',
+            });
+          } else {
+            var user = new UserRegister();
+            user.email = email;
+            user.fullName = fullName;
+            user.phone = phone;
+            user.typeOfPerson = typeOfPerson;
+            bcrypt.hash(password, saltRounds, function (err, hash) {
+              user.hash = hash;
+              user
+                .save()
+                .then(async function () {
+                  UserLog.create({
+                    userId: user.id,
+                    typeOfPerson: user.typeOfPerson,
+                    logType: 'Sign Up',
+                  });
+                  let { token } = await sign(user);
+                  return resolve({
+                    token,
+                    message: 'Admin registered successfully!',
+                    code: 'adminRegistered',
+                  });
+                })
+                .catch((err) => reject(err));
+            });
+          }
+        })
+        .catch((err) => reject(err));
+    } else {
+      UserRegister.findOne({
+        email: email,
+        typeOfPerson: 'user',
+        isActive: true,
+      })
+        .then((user) => {
+          if (user) {
+            return reject({
+              message: 'User Already Exist',
+              code: 'userExist',
+            });
+          } else {
+            var user = new UserRegister();
+            user.email = email;
+            user.fullName = fullName;
+            user.phone = phone;
+            user.typeOfPerson = typeOfPerson;
+            bcrypt.hash(password, saltRounds, function (err, hash) {
+              user.hash = hash;
+              user
+                .save()
+                .then(async function () {
+                  UserLog.create({
+                    userId: user.id,
+                    typeOfPerson: user.typeOfPerson,
+                    logType: 'Sign Up',
+                  });
+                  let { token } = await sign(user);
+                  return resolve({
+                    token,
+                    message: 'User registered successfully!',
+                    code: 'userRegistered',
+                  });
+                })
+                .catch((err) => reject(err));
+            });
+          }
+        })
+        .catch((err) => reject(err));
+    }
   });
 };
 
-module.exports.login = (email, password) => {
+module.exports.login = (email, password, typeOfPerson) => {
   return new Promise((resolve, reject) => {
-    UserRegister.findOne({
-      email: email,
-      isActive: true,
-    })
-      .then(async (user) => {
-        if (!user) {
-          return reject({ message: 'User Not Found', code: 'userNotFound' });
-        }
-        bcrypt.compare(password, user.hash, async function (err, result) {
-          if (result) {
-            UserLog.create({
-              userId: user.id,
-              logType: 'Log In',
-            });
-            let { token } = await sign(user);
-            return resolve({ token });
-          } else {
+    if (typeOfPerson === 'admin') {
+      UserRegister.findOne({
+        email: email,
+        typeOfPerson: 'admin',
+        isActive: true,
+      })
+        .then(async (user) => {
+          if (!user) {
             return reject({
-              message: 'Wrong password',
-              code: 'failedAuthentication',
+              message: 'Admin Not Found',
+              code: 'adminNotFound',
             });
           }
-        });
+          bcrypt.compare(password, user.hash, async function (err, result) {
+            if (result) {
+              UserLog.create({
+                userId: user.id,
+                typeOfPerson: user.typeOfPerson,
+                logType: 'Log In',
+              });
+              let { token } = await sign(user);
+              return resolve({ token });
+            } else {
+              return reject({
+                message: 'Wrong password',
+                code: 'failedAuthentication',
+              });
+            }
+          });
+        })
+        .catch((err) => reject(err));
+    } else {
+      UserRegister.findOne({
+        email: email,
+        typeOfPerson: 'user',
+        isActive: true,
       })
-      .catch((err) => reject(err));
+        .then(async (user) => {
+          if (!user) {
+            return reject({ message: 'User Not Found', code: 'userNotFound' });
+          }
+          bcrypt.compare(password, user.hash, async function (err, result) {
+            if (result) {
+              UserLog.create({
+                userId: user.id,
+                typeOfPerson: user.typeOfPerson,
+                logType: 'Log In',
+              });
+              let { token } = await sign(user);
+              return resolve({ token });
+            } else {
+              return reject({
+                message: 'Wrong password',
+                code: 'failedAuthentication',
+              });
+            }
+          });
+        })
+        .catch((err) => reject(err));
+    }
   });
 };
 
@@ -83,7 +172,7 @@ module.exports.getUserData = (userId) => {
     if (user) {
       UserRegister.findOne(
         { _id: userId._id, isActive: true },
-        'fullName phone email isActive'
+        'fullName phone email isActive typeOfPerson isPhoneNumberVerified'
       )
         .then((response) => {
           return resolve({ data: response });
@@ -119,23 +208,19 @@ module.exports.logout = (userId) => {
     if (user) {
       UserLog.create({
         userId: user.id,
+        typeOfPerson: user.typeOfPerson,
         logType: 'Log Out',
       });
       return resolve({
-        message:"Logout Successfully"
-      })
+        message: 'Logout Successfully',
+      });
     } else {
       return reject({ message: 'User Not Found', code: 'userNotFound' });
     }
   });
 };
 
-
-module.exports.updatePassword = (
-  userId,
-  oldPassword,
-  newPassword
-) => {
+module.exports.updatePassword = (userId, oldPassword, newPassword) => {
   return new Promise(async (resolve, reject) => {
     let userDetails = await UserRegister.findOne({
       _id: userId.id,
@@ -169,6 +254,78 @@ module.exports.updatePassword = (
       );
     } else {
       return reject({ message: 'Network Error', code: 'networkError' });
+    }
+  });
+};
+
+module.exports.sendOTP = (userId, phone) => {
+  return new Promise(async (resolve, reject) => {
+    let userDetails = await UserRegister.findOne({
+      _id: userId.id,
+      isActive: true,
+      phone: phone,
+    });
+    const client = twilio(accountSid, authToken);
+
+    if (userDetails) {
+      let otp = Math.floor(1000 + Math.random() * 9000);
+
+      await client.messages
+        .create({
+          body: `Your OTP is ${otp}`,
+          from: twilioNumber,
+          to: '+91' + phone,
+        })
+        .then(() => {
+          return resolve(
+            UserRegister.findOneAndUpdate({
+              _id: userId.id,
+              isActive: true,
+              otp: otp,
+            })
+          );
+        })
+        .catch((err) => reject(err));
+    } else {
+      return reject({
+        message: 'Enter Your Registered Phone Number',
+        code: 'enterYourRegisteredPhoneNumber',
+      });
+    }
+  });
+};
+
+module.exports.verifyOTP = (user, otp) => {
+  return new Promise((resolve, reject) => {
+    const userDetails = UserRegister.findOne({
+      _id: user.id,
+      isActive: true,
+    });
+
+    if (userDetails) {
+      if (user.otp === Number(otp)) {
+        UserRegister.findOneAndUpdate({
+          isPhoneNumberVerified: true,
+        });
+        return resolve({
+          message: 'OTP Verified',
+          code: 'otpVerified',
+        });
+      } else {
+        return reject({
+          message: 'Invalid OTP',
+          code: 'invalidOTP',
+        });
+      }
+    } else {
+      const message =
+        userDetails.typeOfPerson === 'admin'
+          ? 'Admin Not Found'
+          : 'User Not Found';
+      return reject({
+        message: { message },
+        code: { message },
+      });
     }
   });
 };
