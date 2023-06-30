@@ -158,8 +158,7 @@ module.exports.sendOTP = async (req, res) => {
     let data = await UserModules.sendOTP(userId, phone);
     return res.json(data);
   } catch (error) {
-    res
-      .status(422)
+      res.status(422)
       .json({ errors: { body: [error.message], code: [error.code] } });
   }
 };

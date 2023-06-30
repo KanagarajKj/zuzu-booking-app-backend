@@ -276,14 +276,18 @@ module.exports.sendOTP = (userId, phone) => {
           from: twilioNumber,
           to: '+91' + phone,
         })
-        .then(() => {
-          return resolve(
-            UserRegister.findOneAndUpdate({
-              _id: userId.id,
-              isActive: true,
-              otp: otp,
-            })
+        .then(async () => {
+          const userData = await UserRegister.findOneAndUpdate(
+            { _id: userId.id },
+            { $set: { isActive: true, otp: otp } },
+            { new: true }
           );
+          if (userData) {
+            return resolve({
+              message: 'OTP Sent Successfully',
+              code: 'otpSentSuccessfully',
+            });
+          }
         })
         .catch((err) => reject(err));
     } else {
@@ -295,8 +299,8 @@ module.exports.sendOTP = (userId, phone) => {
   });
 };
 
-module.exports.verifyOTP = (user, otp) => {
-  return new Promise((resolve, reject) => {
+module.exports.verifyOTP =  (user, otp) => {
+  return new Promise(async (resolve, reject) => {
     const userDetails = UserRegister.findOne({
       _id: user.id,
       isActive: true,
@@ -304,13 +308,17 @@ module.exports.verifyOTP = (user, otp) => {
 
     if (userDetails) {
       if (user.otp === Number(otp)) {
-        UserRegister.findOneAndUpdate({
-          isPhoneNumberVerified: true,
-        });
-        return resolve({
-          message: 'OTP Verified',
-          code: 'otpVerified',
-        });
+        const userData = await UserRegister.findOneAndUpdate(
+          { _id: user.id },
+          { $set: { isPhoneNumberVerified: true } },
+          { new: true }
+        );
+        if (userData) {
+          return resolve({
+            message: 'OTP Verified',
+            code: 'otpVerified',
+          });
+        }
       } else {
         return reject({
           message: 'Invalid OTP',
