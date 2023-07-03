@@ -23,7 +23,7 @@ module.exports.signUp = async (req, res, next) => {
           code: 'emailRequired',
         })
       );
-    if (!password || password.length < 6 || password.length > 32)
+    if (!password || password.length < 6 || password.length > 12)
       return next(
         createError(400, {
           message: 'Password should be between 6 to 32 characters',

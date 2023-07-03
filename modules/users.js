@@ -103,27 +103,122 @@ module.exports.signUp = (fullName, phone, email, password, typeOfPerson) => {
 
 module.exports.login = (email, password, typeOfPerson) => {
   return new Promise((resolve, reject) => {
-    if (typeOfPerson === 'admin') {
-      UserRegister.findOne({
-        email: email,
-        typeOfPerson: 'admin',
-        isActive: true,
-      })
-        .then(async (user) => {
-          if (!user) {
-            return reject({
-              message: 'Admin Not Found',
-              code: 'adminNotFound',
-            });
-          }
-
-          const enteredPassword = password.trim();
-          const hashPassword = user.hash.trim();
-
-          await bcrypt.compare(
-            enteredPassword,
-            hashPassword,
-            async (err, result) => {
+    if (password?.length > 12) {
+      if (typeOfPerson === 'admin') {
+        UserRegister.findOne({
+          email: email,
+          typeOfPerson: 'admin',
+          isActive: true,
+        })
+          .then(async (user) => {
+            if (!user) {
+              return reject({
+                message: 'Admin Not Found',
+                code: 'adminNotFound',
+              });
+            }
+            const enteredPassword = password.trim();
+            const hashPassword = user.hash.trim();
+                if (enteredPassword === hashPassword) {
+                  UserLog.create({
+                    userId: user.id,
+                    typeOfPerson: user.typeOfPerson,
+                    logType: 'Log In',
+                  });
+                  let { token } = await sign(user);
+                  return resolve({ token });
+                } else {
+                  return reject({
+                    message: 'Wrong password',
+                    code: 'wrongPassword',
+                  });
+                }
+          })
+          .catch((err) => reject(err));
+      } else {
+        UserRegister.findOne({
+          email: email,
+          typeOfPerson: 'user',
+          isActive: true,
+        })
+          .then(async (user) => {
+            if (!user) {
+              return reject({
+                message: 'User Not Found',
+                code: 'userNotFound',
+              });
+            }
+            const enteredPassword = password.trim();
+            const hashPassword = user.hash.trim();
+            if (enteredPassword === hashPassword) {
+              UserLog.create({
+                userId: user.id,
+                typeOfPerson: user.typeOfPerson,
+                logType: 'Log In',
+              });
+              let { token } = await sign(user);
+              return resolve({ token });
+            } else {
+              return reject({
+                message: 'Wrong password',
+                code: 'wrongPassword',
+              });
+            }
+          })
+          .catch((err) => reject(err));
+      }
+    } else {
+      if (typeOfPerson === 'admin') {
+        UserRegister.findOne({
+          email: email,
+          typeOfPerson: 'admin',
+          isActive: true,
+        })
+          .then(async (user) => {
+            if (!user) {
+              return reject({
+                message: 'Admin Not Found',
+                code: 'adminNotFound',
+              });
+            }
+            const enteredPassword = password.trim();
+            const hashPassword = user.hash.trim();
+            await bcrypt.compare(
+              enteredPassword,
+              hashPassword,
+              async (err, result) => {
+                if (result) {
+                  UserLog.create({
+                    userId: user.id,
+                    typeOfPerson: user.typeOfPerson,
+                    logType: 'Log In',
+                  });
+                  let { token } = await sign(user);
+                  return resolve({ token });
+                } else {
+                  return reject({
+                    message: 'Wrong password',
+                    code: 'wrongPassword',
+                  });
+                }
+              }
+            );
+          })
+          .catch((err) => reject(err));
+      } else {
+        UserRegister.findOne({
+          email: email,
+          typeOfPerson: 'user',
+          isActive: true,
+        })
+          .then(async (user) => {
+            if (!user) {
+              return reject({
+                message: 'User Not Found',
+                code: 'userNotFound',
+              });
+            }
+            bcrypt.compare(password, user.hash, async function (err, result) {
               if (result) {
                 UserLog.create({
                   userId: user.id,
@@ -138,38 +233,10 @@ module.exports.login = (email, password, typeOfPerson) => {
                   code: 'wrongPassword',
                 });
               }
-            }
-          );
-        })
-        .catch((err) => reject(err));
-    } else {
-      UserRegister.findOne({
-        email: email,
-        typeOfPerson: 'user',
-        isActive: true,
-      })
-        .then(async (user) => {
-          if (!user) {
-            return reject({ message: 'User Not Found', code: 'userNotFound' });
-          }
-          bcrypt.compare(password, user.hash, async function (err, result) {
-            if (result) {
-              UserLog.create({
-                userId: user.id,
-                typeOfPerson: user.typeOfPerson,
-                logType: 'Log In',
-              });
-              let { token } = await sign(user);
-              return resolve({ token });
-            } else {
-              return reject({
-                message: 'Wrong password',
-                code: 'wrongPassword',
-              });
-            }
-          });
-        })
-        .catch((err) => reject(err));
+            });
+          })
+          .catch((err) => reject(err));
+      }
     }
   });
 };
