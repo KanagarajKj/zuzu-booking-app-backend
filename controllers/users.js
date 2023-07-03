@@ -69,13 +69,6 @@ module.exports.login = async (req, res, next) => {
         })
       );
 
-    if (!password || password.length < 6 || password.length > 32)
-      return next(
-        createError(400, {
-          message: 'Password should be between 6 to 32 characters',
-          code: 'passwordRequired',
-        })
-      );
 
     if (!typeOfPerson) {
       return next(

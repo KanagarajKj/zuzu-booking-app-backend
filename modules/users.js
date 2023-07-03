@@ -116,22 +116,32 @@ module.exports.login = (email, password, typeOfPerson) => {
               code: 'adminNotFound',
             });
           }
-          bcrypt.compare(password, user.hash, async function (err, result) {
-            if (result) {
-              UserLog.create({
-                userId: user.id,
-                typeOfPerson: user.typeOfPerson,
-                logType: 'Log In',
-              });
-              let { token } = await sign(user);
-              return resolve({ token });
-            } else {
-              return reject({
-                message: 'Wrong password',
-                code: 'failedAuthentication',
-              });
+
+          const enteredPassword = password.trim();
+          const hashPassword = user.hash.trim();
+
+          await bcrypt.compare(
+            enteredPassword,
+            hashPassword,
+            async (err, result) => {
+              console.log(hashPassword, 'user.hash 000000000000');
+              console.log(enteredPassword, 'user password');
+              if (result) {
+                UserLog.create({
+                  userId: user.id,
+                  typeOfPerson: user.typeOfPerson,
+                  logType: 'Log In',
+                });
+                let { token } = await sign(user);
+                return resolve({ token });
+              } else {
+                return reject({
+                  message: 'Wrong password',
+                  code: 'wrongPassword',
+                });
+              }
             }
-          });
+          );
         })
         .catch((err) => reject(err));
     } else {
@@ -156,7 +166,7 @@ module.exports.login = (email, password, typeOfPerson) => {
             } else {
               return reject({
                 message: 'Wrong password',
-                code: 'failedAuthentication',
+                code: 'wrongPassword',
               });
             }
           });
@@ -172,7 +182,7 @@ module.exports.getUserData = (userId) => {
     if (user) {
       UserRegister.findOne(
         { _id: userId._id, isActive: true },
-        'fullName phone email isActive typeOfPerson isPhoneNumberVerified'
+        'fullName phone email isActive typeOfPerson isPhoneNumberVerified hash'
       )
         .then((response) => {
           return resolve({ data: response });
@@ -299,7 +309,7 @@ module.exports.sendOTP = (userId, phone) => {
   });
 };
 
-module.exports.verifyOTP =  (user, otp) => {
+module.exports.verifyOTP = (user, otp) => {
   return new Promise(async (resolve, reject) => {
     const userDetails = UserRegister.findOne({
       _id: user.id,
