@@ -124,8 +124,6 @@ module.exports.login = (email, password, typeOfPerson) => {
             enteredPassword,
             hashPassword,
             async (err, result) => {
-              console.log(hashPassword, 'user.hash 000000000000');
-              console.log(enteredPassword, 'user password');
               if (result) {
                 UserLog.create({
                   userId: user.id,
